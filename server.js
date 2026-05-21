@@ -13,21 +13,40 @@ const styleFile = fs.readFileSync(path.join(__dirname, 'static', 'style.css'));
 const registerFile = fs.readFileSync(path.join(__dirname, 'static', 'register.html'));
 const loginFile = fs.readFileSync(path.join(__dirname, 'static', 'login.html'));
 
+const PORT = process.env.PORT || 3000
+
 const server = http.createServer((req, res) => {
   if(req.method === 'GET') {
     switch(req.url) {
-      case '/': return res.end(indexHtmlFile);
-      case '/script.js': return res.end(scriptFile);
-      case '/auth.js': return res.end(authFile);
-      case '/style.css': return res.end(styleFile);
-      case '/register': return res.end(registerFile);
-      case '/login': return res.end(loginFile);
+      case '/register': 
+      res.writeHead(200, {
+        'Content-Type': 'text/html'
+      });
+      return res.end(registerFile);
+      case '/login': 
+      res.writeHead(200, {
+        'Content-Type': 'text/html'
+      });
+      return res.end(loginFile);
+      case '/auth.js': 
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript'
+      });
+      return res.end(authFile);
+      case '/style.css': 
+      res.writeHead(200, {
+        'Content-Type': 'text/css'
+      });
+      return res.end(styleFile);
+      
+      default: return guarded(req, res);
     }
   }
   if(req.method === 'POST') {
     switch(req.url) {
-      case '/register': return registerUser(req, res);
-      case '/login': return loginUser(req, res);
+      case '/api/register': return registerUser(req, res);
+      case '/api/login': return loginUser(req, res);
+      default: return guarded(req, res);
     }
   }
   return res.end('Error 404');
@@ -101,7 +120,9 @@ function guarded(req, res){
   return res.end('Error 404')
 }
 
-server.listen(3000);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Running on ${PORT}`)
+});
 
 const { Server } = require("socket.io");
 const io = new Server(server);
