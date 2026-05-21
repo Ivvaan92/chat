@@ -69,7 +69,7 @@ module.exports = {
       [msg, userId]
     );
   },
-  isUserExist: async (login) => {
+  isUserExists: async (login) => {
     const candidate = await db.all(`SELECT * FROM user WHERE login = ?`, [login]);
     return !!candidate.length;
   },

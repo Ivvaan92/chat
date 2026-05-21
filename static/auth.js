@@ -13,7 +13,7 @@ registerForm?.addEventListener('submit', (event) => {
         password: password.value
     });
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/register');
+    xhr.open('POST', '/api/register');
     xhr.send(user);
     xhr.onload = () => alert(xhr.response);
 });
@@ -28,7 +28,7 @@ loginForm?.addEventListener('submit', (event) => {
         password: password.value
     });
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/login');
+    xhr.open('POST', '/api/login');
     xhr.send(user);
     xhr.onload = () => {
         if(xhr.status === 200){

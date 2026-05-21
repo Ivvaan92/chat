@@ -8,109 +8,120 @@ const validAuthTokens = []
 
 const indexHtmlFile = fs.readFileSync(path.join(__dirname, 'static', 'index.html'));
 const scriptFile = fs.readFileSync(path.join(__dirname, 'static', 'script.js'));
-const authFile = fs.readFileSync(path.join(__dirname, 'static', 'auth.js'));
 const styleFile = fs.readFileSync(path.join(__dirname, 'static', 'style.css'));
 const registerFile = fs.readFileSync(path.join(__dirname, 'static', 'register.html'));
+const authFile = fs.readFileSync(path.join(__dirname, 'static', 'auth.js'));
 const loginFile = fs.readFileSync(path.join(__dirname, 'static', 'login.html'));
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 
 const server = http.createServer((req, res) => {
-  if(req.method === 'GET') {
+  if(req.method === 'GET'){
     switch(req.url) {
-      case '/register': 
-      res.writeHead(200, {
-        'Content-Type': 'text/html'
-      });
-      return res.end(registerFile);
-      case '/login': 
-      res.writeHead(200, {
-        'Content-Type': 'text/html'
-      });
-      return res.end(loginFile);
-      case '/auth.js': 
-      res.writeHead(200, {
-        'Content-Type': 'text/javascript'
-      });
-      return res.end(authFile);
-      case '/style.css': 
-      res.writeHead(200, {
-        'Content-Type': 'text/css'
-      });
-      return res.end(styleFile);
-      
-      default: return guarded(req, res);
+        case '/': 
+          res.writeHead(200,{
+            'Content-Type': 'text/html'
+          });
+        return res.end(indexHtmlFile);
+        case '/script.js':
+        res.writeHead(200,{
+            'Content-Type': 'text/javascript'
+          });
+        return res.end(scriptFile);
+        case '/auth.js':
+        res.writeHead(200,{
+            'Content-Type': 'text/javascript'
+          });
+        return res.end(authFile);
+        case '/style.css':
+        res.writeHead(200,{
+            'Content-Type': 'text/css'
+          });
+        return res.end(styleFile);
+        case '/register':
+        res.writeHead(200,{
+            'Content-Type': 'text/html'
+          });
+        return res.end(registerFile);
+        case '/login':
+        res.writeHead(200,{
+            'Content-Type': 'text/html'
+          });
+        return res.end(loginFile);
     }
   }
-  if(req.method === 'POST') {
-    switch(req.url) {
-      case '/api/register': return registerUser(req, res);
-      case '/api/login': return loginUser(req, res);
-      default: return guarded(req, res);
+
+  if(req.method === 'POST'){
+    switch(req.url){
+      case '/api/register': return registerUser(req, res)
+      case '/api/login': return loginUser(req, res)
     }
   }
-  return res.end('Error 404');
+
+
+    return res.end('Error 404');
 });
 
-function registerUser(req, res) {
-    let data = '';
-    req.on('data', function(chunk) {
-        data += chunk;
-    });
-    req.on('end', async function() {
-      try {
-        const user = JSON.parse(data);
-        if(!user.login || !user.password) {
-          return res.end('Empty login or password');
-        }
-        if(await db.isUserExist(user.login)) {
-          return res.end('User already exist');
-        }
-        await db.addUser(user);
-        return res.end('Registeration is successfull');
-      }
-      catch(e) {
-        return res.end('Error: ' + e);
-      }
-    });
-}
-
-function loginUser(req, res){
+function registerUser(req,res){
   let data = ''
   req.on('data', (chunk)=>{
     data+=chunk
   })
-    req.on('end',async ()=>{
-    console.log(data)
-    try {
+  req.on('end', async()=>{
+    
+    try{
       const user = JSON.parse(data)
+      if(!user.login || !user.password) return res.end('Пусті логін або пароль')
+      if(await db.isUserExists(user.login)) return res.end('такий користувач уже існує')
+      await db.addUser(user)
+      return res.end('Реєстрація успішна')
+      
+    }
+    catch(e){
+      return res.end(`помилка: ${e}`)
+    }
+  })
+}
+
+function loginUser(req,res){
+  let data = ''
+  req.on('data', (chunk)=>{
+    data += chunk
+  })
+  req.on('end', async ()=>{
+    console.log(data)
+    try{
+    const user = JSON.parse(data)
     const token = await db.getAuthToken(user)
     validAuthTokens.push(token)
     res.writeHead(200)
     res.end(token)
-  }
-  catch(e){
-    res.writeHead(500)
-    return res.end(`Error: ${e}`)
-  }
+    }
+    catch(e){
+      res.writeHead(500)
+      return res.end(`Error: ${e}`)
+    }
   })
 }
 
+
+
 function getCredentionals(c = ''){
-  const cookies = cookie.parse(c)
-  const token = cookies?.token
-  if(!token || !validAuthTokens.includes(token)) return null;
-  const [user_id, login] = token.split('.')
-  if(!user_id || !login) return null
-  return {user_id, login}
+    const cookies = cookie.parse(c)
+    const token = cookies?.token
+    if(!token || !validAuthTokens.includes(token)) return null;
+    const [user_id, login] = token.split('.')
+    if(!user_id || !login) return null;
+    return {user_id, login}
 }
 
-function guarded(req, res){
-  const credentionals = getCredentionals(req.header?.cookie)
-  if(!credentionals){
+
+function guarded(req,res){
+  const credentionals = getCredentionals(req.headers?.cookie)
+  if(credentionals){
     res.writeHead(302, {'Location': '/register'})
   }
-  if(req.metod === 'GET'){
+  if(req.method === 'GET'){
     switch(req.url){
       case '/': return res.end(indexHtmlFile)
       case '/script': return res.end(scriptFile)
@@ -120,8 +131,9 @@ function guarded(req, res){
   return res.end('Error 404')
 }
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Running on ${PORT}`)
+
+server.listen(PORT, '0.0.0.0', ()=>{
+    console.log(`Running on port ${PORT}`)
 });
 
 const { Server } = require("socket.io");
@@ -129,10 +141,10 @@ const io = new Server(server);
 
 io.use((socket, next)=>{
   const cookie = socket.handshake.auth.cookie;
-  const credentionals = getCredentionals(cookie);
+  const credentionals = getCredentionals(cookie)
   if(!credentionals) next(new Error('no auth'));
   socket.credentionals = credentionals;
-  next();
+  next()
 })
 
 io.on('connection', async (socket) => {
